@@ -1,0 +1,14 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512",
+  "dataset": {
+    "name": "wenyanwen_long_context_512_long_dev",
+    "splits": {
+      "train": "train.json",
+      "eval": "dev.json",
+      "test": "test.json",
+      "types": "types.json"
+    },
+    "data_dir": "long_context",
+    "reinitialize_dataset": false
+  }
+}

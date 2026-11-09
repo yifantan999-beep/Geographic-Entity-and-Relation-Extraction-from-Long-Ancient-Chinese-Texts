@@ -1,0 +1,22 @@
+.idea/
+.venv/
+__pycache__/
+*.py[cod]
+*.safetensors
+*.egg-info
+venv
+build
+datasets
+models
+smac3/logs
+artifacts/**/*.xlsx
+artifacts/**/*.csv
+
+!scripts/datasets
+!scripts/models
+!iter/datasets
+
+# Project specific files
+*.zip
+cfg/ade_split*.json
+cfg/ade/*_split*.json

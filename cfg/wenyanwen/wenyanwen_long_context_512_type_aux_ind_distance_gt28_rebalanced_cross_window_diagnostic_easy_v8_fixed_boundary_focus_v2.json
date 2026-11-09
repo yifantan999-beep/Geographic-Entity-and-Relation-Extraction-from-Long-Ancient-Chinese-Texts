@@ -1,0 +1,16 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux_ind_distance_gt28_rebalanced_cross_window_diagnostic_easy_v8_fixed_boundary_focus",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_ind_distance_gt28_rebalanced_cross_window_diagnostic_easy_v8_fixed_boundary_focus_v2",
+    "data_dir": "ind_distance_gt28_rebalanced_cross_window_diagnostic_easy",
+    "reinitialize_dataset": false,
+    "ner_boundary_consistency_loss_weight": 0.10
+  },
+  "training": {
+    "num_epochs": 20,
+    "patience": 6,
+    "batch_size": 1,
+    "gradient_accumulation": 8,
+    "optimize_for": "ner"
+  }
+}

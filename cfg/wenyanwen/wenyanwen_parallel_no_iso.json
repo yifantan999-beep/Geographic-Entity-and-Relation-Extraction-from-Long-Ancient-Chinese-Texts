@@ -1,0 +1,14 @@
+{
+  "base": "wenyanwen",
+  "dataset": {
+    "name": "wenyanwen_parallel_no_iso",
+    "features": [22, 23, 24, 25],
+    "fact_loss_weight": 0.5,
+    "multiscale_loss_weight": 0.1
+  },
+  "training": {
+    "num_epochs": 25,
+    "batch_size": 2,
+    "gradient_accumulation": 4
+  }
+}

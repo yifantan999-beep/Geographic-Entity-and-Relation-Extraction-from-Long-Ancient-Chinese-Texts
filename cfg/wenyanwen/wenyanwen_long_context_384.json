@@ -1,0 +1,21 @@
+{
+  "base": "wenyanwen/wenyanwen_multiscale",
+  "dataset": {
+    "name": "wenyanwen_long_context",
+    "features": [13, 23, 25],
+    "max_length": 384,
+    "enable_windowing": true,
+    "window_overlap": 96,
+    "windowing_version": 2,
+    "fail_on_uncovered_entities": true,
+    "reinitialize_dataset": false
+  },
+  "training": {
+    "num_epochs": 30,
+    "patience": 10,
+    "batch_size": 2,
+    "gradient_accumulation": 4,
+    "optimize_for": "ere",
+    "metric_average": "micro"
+  }
+}

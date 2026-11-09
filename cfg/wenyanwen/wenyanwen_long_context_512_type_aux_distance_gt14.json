@@ -1,0 +1,8 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_distance_gt14",
+    "data_dir": "long_context_distance_gt14",
+    "reinitialize_dataset": false
+  }
+}

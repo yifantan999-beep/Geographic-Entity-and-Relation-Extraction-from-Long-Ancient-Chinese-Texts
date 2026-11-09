@@ -1,0 +1,27 @@
+# ITER Wenyanwen Geo-NER/RE - Python >= 3.10
+
+# Core deep learning
+torch>=2.1.2
+transformers>=4.36.0
+tokenizers>=0.15.0
+safetensors>=0.4.2
+
+# ITER runtime
+torchcheck==1.0.7
+safetensors_dataset>=0.0.5
+with_argparse>=0.0.7rc1
+torcheval>=0.0.7
+tqdm>=4.66.1
+sentencepiece==0.2.0
+protobuf==5.29.1
+py-make>=0.1.1
+pyrootutils>=1.0.4
+gdown>=5.0.0
+
+# Evaluation/report output
+openpyxl>=3.1.0
+
+# Optional experiment utilities
+matplotlib>=3.8.3
+smac>=2.0.2
+hydra-core>=1.3.2

@@ -1,0 +1,24 @@
+{
+  "base": "wenyanwen/wenyanwen_base",
+  "dataset": {
+    "name": "wenyanwen_long_context_baseline",
+    "features": [13],
+    "max_length": 512,
+    "enable_windowing": true,
+    "window_overlap": 128,
+    "windowing_version": 2,
+    "fail_on_uncovered_entities": true,
+    "long_context_chunk_size": 32,
+    "long_context_num_heads": 8,
+    "long_context_dropout": 0.1,
+    "reinitialize_dataset": false
+  },
+  "training": {
+    "num_epochs": 30,
+    "patience": 10,
+    "batch_size": 2,
+    "gradient_accumulation": 4,
+    "optimize_for": "ner",
+    "metric_average": "micro"
+  }
+}

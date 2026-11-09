@@ -1,0 +1,9 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_long_dev",
+  "training": {
+    "length_sampling_enabled": true,
+    "length_sampling_medium_weight": 1.5,
+    "length_sampling_long_weight": 3.0,
+    "length_sampling_threshold": 256
+  }
+}

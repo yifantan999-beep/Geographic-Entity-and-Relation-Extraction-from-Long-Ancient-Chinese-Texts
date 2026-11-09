@@ -1,0 +1,12 @@
+{
+  "base": "wenyanwen",
+  "dataset": {
+    "name": "wenyanwen_fact",
+    "features": [22]
+  },
+  "training": {
+    "num_epochs": 25,
+    "batch_size": 2,
+    "gradient_accumulation": 4
+  }
+}

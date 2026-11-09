@@ -1,0 +1,78 @@
+P7: O(m^2)
+P15: E'
+P16: E'
+P19: L_NER | L_RE
+P22: x_1 | x_n | W_k | a_k | b_k | a_{k+1}
+P23: l_i | c_m
+P24: h_i | h'_i | ⊙ | σ
+P25: q_{s,e,t}
+P26: L_NER
+P27: q^{base} | p_s | p_e | U_t | r_t | γ | w_t | u_i^s | u_i^e | y_i^s | y_i^e | ∈ | w_i | λ
+P28: u_{ij}
+P29: V_i | v_{ik} | W_k | κ | e_i | e_j | p_i | p_j | d_{ij} | c_i | c_j | φ
+P30: a_{ijk} | v_{ij} | L_evidence
+P31: G_{ij}
+P32: w_k | W_k | d_h | ∋ | c_k | I_{ij} | c_i | c_j | B_r | α | z^{long} | d_{ij} | ≥ | z^{(m)} | ω | λ
+P33: L_RE
+P34: r_{PU} | L_RE
+P35: L_{ijr} | m_{ijr} | ∈ | q_r | F_{ijr} | p_{ijr} | π | E_u | L_dist | L_rank | L_compat | L_focal | L_expert
+P43: E'
+P45: d_{ij} | ≥ | m_{ijr} | G_{ijr}
+P49: d_{ij} | ≥
+P64: Lin'
+P65: x_1 | x_n | W_k | a_k | b_k | a_{k+1}
+P66: W_k
+P68: h_1 | h_n | l_i | c_m
+P69: ≥ | q^{base}
+P70: h_s | h_e | u_i^{start} | u_i^{end} | w_i | L_NER
+P71: E'
+P72: E' | ≠
+P73: V_i | W_k | κ | ρ | e_i | p_i | p_j | φ | d_{ij} | u_{ij}
+P75: w_k | W_k | a_{ijk} | v_{ij} | L_evidence
+P76: b^{prior} | z^{(m)} | z^{long} | G_{ij}
+P77: L_{ijr} | m_{ijr} | λ | p_{ijr}
+P78: L_RE
+T0R0: h'_i | h_i | g_i | ⊙ | c_{m(i)} | l_i
+T0R1: g_i | σ | l_i | c_{m(i)}
+T1R0: q_{s,e,t} | q^{base} | γ | p_s^T | U_t | p_e | r_t
+T1R1: γ | σ | q^{base} | r_{s,e,t}
+T2R0: L_NER | L_span | λ | L_type | L_start | L_end | L_margin
+T2R1: L_type | ∑ | ∈ | w_t | γ
+T2R2: L_bnd | ∑ | ∈ | w_i | u_i^q | y_i^q
+T2R3: L_margin | ∑ | ∈ | q_g | max_{c∈H(g)} | q_c
+T3R0: e_i | ∑ | ∈ | V_i | ρ | v_{ik} | softmax_k | κ
+T3R1: u_{ij} | e_i | e_j | ⊙ | p_i | p_j | φ | d_{ij}
+T4R0: a_{ijk} | softmax_k | u_{ij} | w_k | √ | d_h | W_k | ∋
+T4R1: v_{ij} | ∑ | a_{ijk} | w_k
+T4R2: g_{ijk} | W_k | ∋ | c_k | ∈ | I_{ij} | ∑ | k' | g_{ijk'}
+T4R3: L_evidence | ∑ | ∈ | a_{ijk}
+T5R0: b^{prior} | p_i^T | B_r | p_j | u_{ij} | v_{ij} | α
+T5R1: z^{exp} | ∑ | ω | d_{ij} | z^{(m)}
+T5R2: G_{ij} | λ | d_{ij} | ≥ | z^{long} | z^{exp}
+T6R0: λ | σ | θ | d_{ij} | p_i | p_j | max_k | a_{ijk} | G_{ijr} | L_{ijr} | m_{ijr} | q_r
+T6R1: F_{ijr} | λ | L_{ijr} | G_{ijr} | m_{ijr}
+T6R2: p_{ijr} | σ | F_{ijr}
+T7R0: r_{PU} | π | z_r | E_u
+T7R1: L_RE | L_PU | λ | L_evidence | L_dist | L_rank | L_compat | L_focal | L_expert
+T8R0: h'_i | h_i | g_i | ⊙ | c_{m(i)} | l_i
+T8R1: g_i | σ | l_i | c_{m(i)}
+T9R0: q_{s,e,t} | q^{base} | γ | p_s^T | U_t | p_e | r_t
+T9R1: γ | σ | q^{base} | r_{s,e,t}
+T10R0: L_NER | L_span | λ | L_type | L_start | L_end | L_margin
+T10R1: L_type | ∑ | ∈ | w_t | γ
+T10R2: L_bnd | ∑ | ∈ | w_i | u_i^q | y_i^q
+T10R3: L_margin | ∑ | ∈ | q_g | max_{c∈H(g)} | q_c
+T11R0: e_i | ∑ | ∈ | V_i | ρ | v_{ik} | softmax_k | κ
+T11R1: u_{ij} | e_i | e_j | ⊙ | p_i | p_j | φ | d_{ij}
+T12R0: a_{ijk} | softmax_k | u_{ij} | w_k | √ | d_h | W_k | ∋
+T12R1: v_{ij} | ∑ | a_{ijk} | w_k
+T12R2: g_{ijk} | W_k | ∋ | c_k | ∈ | I_{ij} | ∑ | k' | g_{ijk'}
+T12R3: L_evidence | ∑ | ∈ | a_{ijk}
+T13R0: b^{prior} | p_i^T | B_r | p_j | u_{ij} | v_{ij} | α
+T13R1: z^{exp} | ∑ | ω | d_{ij} | z^{(m)}
+T13R2: G_{ij} | λ | d_{ij} | ≥ | z^{long} | z^{exp}
+T14R0: λ | σ | θ | d_{ij} | p_i | p_j | max_k | a_{ijk} | G_{ijr} | L_{ijr} | m_{ijr} | q_r
+T14R1: F_{ijr} | λ | L_{ijr} | G_{ijr} | m_{ijr}
+T14R2: p_{ijr} | σ | F_{ijr}
+T15R0: r_{PU} | π | z_r | E_u
+T15R1: L_RE | L_PU | λ | L_evidence | L_dist | L_rank | L_compat | L_focal | L_expert

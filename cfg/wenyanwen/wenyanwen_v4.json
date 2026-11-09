@@ -1,0 +1,23 @@
+{
+  "base": "wenyanwen",
+  "dataset": {
+    "name": "wenyanwen_v4",
+    "features": [23, 25],
+    "max_length": 256
+  },
+  "training": {
+    "num_epochs": 30,
+    "patience": 12,
+    "dropout": 0.2,
+    "batch_size": 2,
+    "gradient_accumulation": 4,
+    "lr_t5": 2e-5,
+    "lr_iter": 4e-4,
+    "warmup_steps": 0.05,
+    "task_warmup_steps": 0.1,
+    "lr_scheduler": "linear_with_warmup",
+    "task_lr_scheduler": "linear_with_warmup",
+    "optimize_for": "ere",
+    "metric_average": "micro"
+  }
+}

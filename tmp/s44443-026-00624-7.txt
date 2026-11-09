@@ -1,0 +1,1347 @@
+Vol.:(0123456789)
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+https://doi.org/10.1007/s44443-026-00624-7
+RESEARCH
+Document‑level joint entity and relation extraction based 
+on multi‑task explicit interaction
+Meiyu Du1 · Yahui Zhao1 · Guozhe Jin1 · Zhenghao Huang1 · Rongyi Cui1
+Received: 17 December 2025 / Accepted: 27 February 2026 / Published online: 26 March 2026 
+© The Author(s) 2026
+Abstract
+Document-level joint entity and relation extraction faces persistent challenges, including error propagation across sub-tasks, 
+limited relational reasoning over long documents, and inadequate modeling of heterogeneous semantic edges. To address 
+these issues, we propose a table-filling based multi-task explicit interaction framework. Mentions are uniformly represented 
+as graph nodes, where coreference and relation graphs are dynamically constructed, and mention-level syntactic dependen-
+cies are incorporated as structural priors. To further explore potential correlations between sub-tasks, we design an align-
+ment graph between coreference resolution and relation extraction, explicitly modeling structural dependencies to enable 
+bidirectional information flow and reinforce semantic complementarity. Building on this design, an enhanced relation graph 
+emphasizes high-confidence relational patterns to improve entity representations. In addition, a relation-guided gated graph 
+attention mechanism is proposed to differentiate semantic edge types and adaptively regulate cross-layer message passing, 
+improving robustness to noise and long-tail relations. Hard negative sampling and uncertainty-based weighting are employed 
+to stabilize multi-task optimization. Experiments on two standard document-level benchmarks demonstrate that our approach 
+achieves state-of-the-art performance, validating its effectiveness in relational reasoning and long-document scenarios.
+Keywords Document-level joint entity and relation extraction · Explicit interaction mechanism · Document processing · 
+Multi-task framework
+1 Introduction
+Document-level Relation Extraction (DocRE) is a core NLP 
+task aiming to identify relations between entities at the docu-
+ment level. Unlike sentence-level extraction, DocRE requires 
+reasoning across multiple sentences, with entities often 
+appearing in multiple mentions, necessitating modeling of 
+interactions among mentions distributed throughout a docu-
+ment (Delaunay et al. 2023).
+Although recent studies have achieved notable progress, 
+most existing approaches still rely on pre-identified entities 
+and mentions, which restricts their applicability and robust-
+ness in real-world scenarios. In practice, DocRE inher -
+ently involves tightly coupled sub-tasks, including Mention 
+Extraction (ME), Coreference Resolution (COREF), and 
+Relation Extraction (RE). However, traditional pipeline-
+based frameworks perform these sub-tasks sequentially, 
+which inevitably leads to error propagation and limits cross-
+task information sharing. Even existing joint models often 
+handle COREF and RE in loosely connected modules, fail-
+ing to explicitly model their structural dependencies (Zhang 
+et al. 2023).
+To overcome these limitations, we propose a table-fill-
+ing based multi-task explicit interaction framework. In our 
+framework, mentions are treated as graph nodes, and multi-
+ple task-specific graphs—including a dynamic coreference 
+graph, a relation graph, and a syntactic graph—are jointly 
+constructed. More importantly, we introduce an alignment 
+ * Yahui Zhao 
+ yhzhao@ybu.edu.cn
+ Meiyu Du 
+ 2023010096@ybu.edu.cn
+ Guozhe Jin 
+ jinguozhe@ybu.edu.cn
+ Zhenghao Huang 
+ zhhhuang@ybu.edu.cn
+ Rongyi Cui 
+ cuirongyi@ybu.edu.cn
+1 Yanbian University, Yanji, China
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 2 of 18
+graph to explicitly encode cross-task dependencies between 
+COREF and RE, enabling bidirectional and fine-grained 
+information propagation across subtasks. Unlike prior joint 
+models that rely on implicit feature sharing, our method 
+enforces explicit structural constraints to regulate informa-
+tion flow, thereby improving consistency and robustness in 
+long-document reasoning. Furthermore, a relation-guided 
+gated graph attention mechanism is designed to distinguish 
+multiple semantic edge types and adaptively control their 
+influence during message passing, enabling more accurate 
+and stable reasoning over heterogeneous graph structures.
+In summary, our main contributions are as follows:
+• To reduce noise during information propagation and 
+explicitly model latent dependencies between COREF 
+and RE, we introduce an explicit semantic alignment 
+graph that establishes edges between mentions to 
+explicitly regulate bidirectional information flow across 
+subtasks. This design enables effective cross-task infor -
+mation sharing and enhances reasoning consistency, 
+particularly in long and structurally complex documents. 
+Additionally, an enhanced relation graph is constructed to 
+emphasize high-confidence relational features, strength-
+ening entity representations.
+• To improve discrimination among heterogeneous seman-
+tic relations, we propose a relation-guided gated graph 
+attention network to model heterogeneous semantic rela-
+tions and automatically adjust their layer-wise influence, 
+improving robustness to noisy and long-tail relations.
+• Our method is implemented within a table-filling frame-
+work and evaluated on two widely used DocRE data-
+sets. Experimental results demonstrate that our model 
+achieves state-of-the-art performance across multiple 
+evaluation metrics.
+2  Related work
+With the rapid growth of text from social media, news, and 
+scientific literature, document-level relation extraction has 
+become a key NLP task. It identifies semantic relations 
+between entities in long texts and captures cross-sentence 
+interactions essential for understanding complex events, sup-
+porting applications such as knowledge graph construction 
+and event comprehension.
+However, most studies assume entities and mentions are 
+pre-identified, which rarely holds in practice where entity 
+recognition and relation extraction are tightly coupled. 
+Moreover, reliance on predefined relation schemas limits 
+scalability to unseen or evolving relation types. These limi-
+tations have motivated increasing research interest in joint 
+entity and relation extraction, where multiple subtasks are 
+modeled in a unified framework to improve robustness and 
+practical applicability.
+2.1  Generative models
+Generative approaches treat document-level entity and 
+relation extraction as conditional text generation, decoding 
+structured outputs from linearized sequences using pre-
+trained Seq2Seq models (Nayak and Ng 2020).
+Several generative methods have been proposed. Cabot 
+et al. (Cabot and Navigli 2021) introduced REBEL on 
+DocRED (Yao et al. 2019), linearizing relational triples 
+with BART-large, but retaining only the first mention per 
+entity, limiting coverage. Giorgi et al. (Giorgi et al. 2022) 
+incorporated all mentions into the decoding sequence, which 
+increases sequence length, introduces redundancy, and 
+makes the decoding process sensitive to mention ordering, 
+while clusters without relations are still ignored. Saini et al. 
+(Saini and Nayak 2025) proposed 3G-DocRTE, a three-stage 
+framework performing mention extraction, entity clustering, 
+and triple generation sequentially.
+Despite these advances, generative methods face sev -
+eral intrinsic limitations. Their linearized decoding length 
+grows rapidly with the number of mentions and relations, 
+leading to high inference cost, redundancy, and missing 
+predictions in long or densely connected documents. More 
+importantly, generative models lack explicit structural con-
+straints to enforce cluster consistency and relation complete-
+ness, which makes them less suitable for modeling com-
+plex multi-hop dependencies. These limitations motivate 
+discriminative frameworks that explicitly model structured 
+interactions among mentions, entities, and relations. To 
+address this, we adopt a discriminative framework explicitly 
+modeling entity–relation interactions to improve accuracy 
+and robustness.
+2.2  Discriminative models
+Compared with generative approaches, discriminative mod-
+els adopt explicit classification strategies to hierarchically 
+model entity mentions, entity clusters, and relations, ena-
+bling end-to-end joint extraction of mention recognition, 
+coreference resolution, and relation classification.
+Eberts and Ulges (Eberts and Ulges 2021) proposed 
+JEREX, a three-stage framework addressing mention extrac-
+tion, coreference resolution, and relational triple extraction, 
+supporting both pipeline and joint training. It first identifies 
+mentions via span classification, clusters them with pair -
+wise classification, and finally predicts relations between 
+entity clusters. Xu and Choi (Xu and Choi 2022) further 
+introduced a graph compatibility mechanism to encour -
+age mutual enhancement between coreference and relation 
+decisions, enabling implicit cross-task interaction through 
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 3 of 18 275
+learned compatibility scores. However, such interaction is 
+still mediated implicitly through pairwise scoring functions, 
+without explicit structural constraints to regulate informa-
+tion propagation. Additionally, Zhang et al. (Zhang et al. 
+2023) proposed TAG, which integrates a span-based men-
+tion extractor with a table-filling scheme for coreference 
+and relation classification, improving modeling efficiency 
+and global consistency. Nevertheless, TAG primarily adopts 
+shared table representations for joint modeling, without 
+explicitly imposing structured constraints to regulate cross-
+task information flow, which restricts fine-grained bidirec-
+tional interaction between COREF and RE.
+To more clearly illustrate the differences between our 
+alignment graph and previous works, we summarize key 
+distinctions in Table  1. Compared with Xu and Choi (Xu 
+and Choi 2022) and TAG (Zhang et al. 2023), which rely on 
+implicit feature sharing or compatibility scores, our align-
+ment graph explicitly constructs edges to enable structured 
+bidirectional information propagation. This provides a prin-
+cipled mechanism for multi-task integration and fine-grained 
+reasoning in complex document structures.
+3  Task formulation
+Given a document D with T tokens, the goal is to jointly 
+extract all entities and relations in an end-to-end manner. 
+Since an entity may appear multiple times through different 
+mentions, the task is decomposed into three subtasks.
+Mention Extraction (ME): extracting all possible men-
+tion spans M={ m i}M
+i=1 , where each span is a contiguous 
+token sequence;
+Coreference Resolution (COREF): grouping mentions 
+into entity clusters E ={ ei}E
+i=1 , where ei ={ m i
+j}
+n
+j=1;
+Relation Extraction (RE): predicting whether each entity 
+pair (eh ,e t) expresses a relation in the predefined set R ∪{ ⟂} , 
+where ⟂ denotes no relation.
+We adopt a table-filling framework to uniformly model 
+COREF and RE by performing multi-class classification 
+over mention pairs (mi, mj). For each table cell, we assign a 
+COREF label y(i,j)
+c ∈{ 0,1} and an RE label y (i,j)
+r ⊆ R ∪{ ⟂} . 
+COREF uses binary labels to indicate whether a mention 
+pair refers to the same entity. For RE, entity-level relations 
+are projected to mention pairs, where each (mi, mj)  inherits 
+the relation of their corresponding entities (eh, et)  if m i ∈ eh 
+and m j ∈ et.
+4  Methodology
+We propose a Multi-Task Explicit Interaction model for 
+document-level joint entity and relation extraction (MTEI). 
+The model first encodes documents with a pretrained lan-
+guage model to capture contextual semantics and employs 
+BIO tagging to extract entity mentions, serving as the basis 
+for coreference resolution and relation extraction. Based on 
+the extracted mentions, a unified table-filling framework is 
+used to jointly model COREF and RE.
+To systematically integrate heterogeneous structural signals, 
+we construct five complementary mention-level graphs, includ-
+ing a coreference graph, a relation graph, an enhanced relation 
+graph, and a syntactic graph. These graphs capture task-specific 
+and structural dependencies within and across sentences. In 
+addition, we introduce a semantic alignment graph that explicitly 
+models structured cross-task dependencies between COREF and 
+RE. Unlike prior joint models that rely on implicit feature fusion, 
+the alignment graph introduces directed and task-aware edges 
+to establish explicit information pathways between the two sub-
+tasks, enabling regulated bidirectional information propagation. 
+Based on these five complementary subgraphs, we regard them 
+as heterogeneous edge types and employ a relation-guided graph 
+network to model fine-grained task dependencies and enhance 
+cross-task information sharing. Finally, the refined mention and 
+contextual representations are used to predict COREF and RE 
+scores. The overall architecture is illustrated in Fig. 1, where 
+the left part corresponds to the mention extractor module, and 
+the right part represents the table-filling module for coreference 
+resolution and relation extraction. The detailed structures of 
+these components are shown in Figs. 2 and 3, respectively.
+Table 1  Comparison between 
+prior works and our approach Method Edge Type Update Rule Information Flow
+Xu and Choi Relation Graph Attention Network Implicit
+TAG Coreference,
+Relation,
+Syntactic
+Relational Graph Network Implicit
+MTEI Coreference,
+Relation,
+Enhanced Relation, 
+Syntactic,
+Alignment
+Relation-guided Gated Graph 
+Network
+Explicit
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 4 of 18
+Fig. 1  Model architecture 
+diagram
+Fig. 2  Mention extraction pro-
+cess diagram
+
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 5 of 18 275
+4.1  Mention extractor
+The core objective of Mention Extraction (ME) is to iden-
+tify all entity mentions in a document. As the fundamental 
+subtask of document-level joint entity and relation extrac-
+tion, ME requires accurate boundary detection and contex-
+tual understanding to address challenges such as ambiguous 
+mention spans and long-range contextual dependencies in 
+lengthy documents.
+Following Zhang et al. (Zhang et al. 2023), the proposed 
+model takes a multi-sentence document as input, tokenizes 
+and encodes it using a pretrained language model, and out-
+puts predicted mentions through a BIO tagging scheme, 
+where each token is labeled as the beginning, inside, or 
+outside of a mention. Decoding the predicted labels yields 
+precise mention spans, thereby providing structured and reli-
+able inputs for subsequent coreference resolution and rela-
+tion extraction, as illustrated in Fig. 2.
+4.2  Table filling for coreference resolution 
+and relation extraction
+Coreference Resolution identifies all mentions referring 
+to the same entity within a document. It models semantic 
+associations and contextual dependencies across sentences 
+to handle long-range coreference, enhancing entity represen-
+tations and providing a consistent foundation for relational 
+reasoning.
+Relation Extraction identifies semantic relations between 
+entity pairs. As a core module of document-level joint 
+extraction, it captures inter-entity semantics and contex-
+tual cues, addressing long-range relations and multi-label 
+classification.
+To jointly learn coreference resolution and relation 
+extraction, we propose an explicit interaction framework 
+that enhances cross-task information sharing and improves 
+overall extraction performance. The framework constructs 
+an alignment graph, incorporates relation-level gating, and 
+introduces a joint optimization objective to better capture 
+semantic dependencies among mentions and distinguish 
+different edge types during graph modeling. This design 
+enables more accurate and coherent extraction in complex 
+documents, as illustrated in Fig. 3.
+Given a document D =[ ti]T
+i=1 and a mention set {m i}M
+i=1 , 
+we construct a tabular representation for each mention pair. 
+Following Baldini Soares et al. (Soares et al. 2019), we 
+adopt an entity-marking strategy by inserting a special token 
+* at the start and end of each mention. A PLM is then used 
+to obtain contextual representations and attention matrices, 
+as in Eq. (1):
+where H =[ h1, ..., hT ]T  , hi ∈ ℝd  , and A ∈ ℝH×T×T . The 
+embeddings at the * markers are used as mention represen-
+tations. To capture contextual information relevant to a men-
+tion pair (m i,m j) , we apply local context pooling to compute 
+the context embedding c ij , as in Eqs. (2) - (3):
+where ◦ denotes the Hadamard product, and A i
+h and A j
+h rep-
+resent the attention weights of mentions m i and m j in head 
+h . These weights aggregate tokens jointly attended by both 
+mentions, indicating tokens that are likely informative for 
+the pair.
+Let h i and h j denote the PLM-derived hidden features of 
+mentions m i and m j . We first map h i , h j , and c ij into head and 
+tail representations, as shown in Eqs. (4) - (5):
+(1)H, A = PLM([t 1, ..., tT ])
+(2)aij=
+H/uni2211.s1
+h=1
+A i
+h◦A j
+h
+(3)cij= H T aij
+1T aij
+Fig. 3  Joint Learning framework for CR and RE process diagram
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 6 of 18
+where W h , W t , W ch , W ct ∈ ℝd×d are trainable parameters. We 
+then adopt the biaffine attention model of Dozat et al. (Dozat 
+and Manning 2016) to convert mention representations into 
+a scalar score indicating coreference or relational linkage, 
+as in Eq. (6):
+where W 1 ∈ ℝd×d , W 2 ∈ ℝ2d , and b are trainable parameters, 
+and ⊕ denotes concatenation. Based on these definitions, we 
+compute coreference scores Scr and relation scores Sre using 
+the shared mention representations z. For a mention pair 
+(m i,m j) , if its relation label yre(i,j) ≠ {⟂} , the relation score 
+S re(i,j) is assigned 1; otherwise, it is set to 0, where {⟂} indi-
+cates that the pair has no valid semantic relation.
+4.3  Document graph construction
+CR and RE Graphs. After obtaining the coreference and 
+relation scores Scr and Sre , we normalize each score matrix 
+column-wise as in Eqs. (7) - (8):
+Here, G cr and G re are treated as predicted coreference 
+and relation graphs introduced in Section 3.2, both dynamic 
+weighted graphs in which each cell denotes the directed edge 
+weight m i→m j.
+Syntactic Graph. To encode latent structural knowl-
+edge, we incorporate syntactic signals into the mention 
+graph. Syntactic links capture local context and, combined 
+with coreference or relation edges, support cross-sentence 
+information flow for long-distance dependency modeling. 
+Dependency trees are converted into graphs with mentions 
+as nodes. Following Zeng et al. (Zeng et al. 2020), co-occur-
+rence is used to compensate for intra-sentence dependency 
+limitations. Thus, our syntactic graph G syn connects all men-
+tions within the same sentence with bidirectional edges to 
+strengthen local structure.
+Enhanced RE Graph. Although G re provides soft rela-
+tional connections, it may include noisy low-confidence 
+edges that dilute information propagation. To explicitly 
+emphasize reliable semantic associations, we construct an 
+enhanced relation graph G ere as a hard structual prior. Spe-
+cifically, we first extract the document-level submatrix of 
+Sre and reshape it into a two-dimensional relation-strength 
+matrix. Raw scores are mapped to confidence values via a 
+(4)zi = tanh(W h hi + W chcij)
+(5)zj = tanh(W thj + W ctcij)
+(6)sij= ziW 1zj + W T
+2 (zi ⊕ zj)+ b
+(7)G cr = softmax(Scr)
+(8)G re = softmax(Sre)
+sigmoid function. A directed edge m i→m j is added if the 
+confidence score exceeds a predefined threshold ρ . This 
+binarization process filters out unreliable edges and pre-
+serves only high-confidence relational connections, allow -
+ing G ere to focus message passing on semantically relevant 
+neighbors and to improve robustness to noisy predictions.
+However, feature propagation using only the above graphs 
+still suffers from limited information paths and semantic iso-
+lation between tasks, hindering deep cross-task coordina-
+tion. To address this, we introduce an explicit interaction 
+graph that aligns the semantics of coreference and relation 
+sub-tasks, enabling more effective information sharing.
+Alignment Graph.  Despite the above graph structures, 
+information propagation across the coreference resolution 
+and relation extraction subtasks remains indirect. To explic-
+itly regulate cross-task information flow, we construct a 
+semantic alignment graph G ali to encode structured depend-
+encies between the two subtasks. We first select high-confi-
+dence coreference mention pairs from G cr whose coreference 
+probabilities exceed a threshold ρcr . For each mention, an 
+averaged relation distribution is computed from G re . We then 
+adopt cosine similarity to measure the semantic proximity 
+between the relation distributions of mention pairs in the 
+relation space. Cosine similarity is adopted due to its scale 
+invariance and robustness to distribution smoothing, and has 
+been shown to be effective in capturing semantic consistency 
+between high dimensional distributional representations 
+in prior work (Arora et al. (Arora et al. 2017); Ethayarajh 
+(Ethayarajh 2019)). In contrast to divergence based metrics 
+such as KL divergence, cosine similarity focuses on direc-
+tional agreement between distributions rather than absolute 
+probability calibration, which better matches our objective 
+of modeling relational semantic consistency across mentions 
+(Pereyra et al. (Pereyra et al. 2017)). If both the coreference 
+confidence exceeds ρcr and the relation distribution similar-
+ity exceeds a threshold ρre , a directed edge m i→m j is added 
+to G ali . This dual threshold filtering strategy ensures that 
+only mention pairs that are both coreferentially plausible 
+and semantically consistent in the relation space are con-
+nected, thereby enforcing explicit structural constraints on 
+cross-task information propagation. The resulting alignment 
+graph integrates complementary signals from both subtasks 
+and facilitates fine grained joint modeling and interactive 
+reasoning.
+4.4  Graph network construction
+To enable explicit interaction between coreference resolution 
+and relation extraction, we propose a relation-guided graph 
+network for information propagation, optimizing mention 
+representations. Specifically, the graphs G cr , G re , G syn , G ere , 
+and G ali are treated as five edge types over the mention graph. 
+A relation-aware gated graph convolution network aggregates 
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 7 of 18 275
+neighbor features across relation types, with a gating mecha-
+nism dynamically adjusting each relation’s contribution. Node 
+embeddings x0
+i  are initialized with the hidden features of men-
+tion m i . Given the representation x (l)
+i  at layer l , its update at 
+layer l + 1 is defined in Eq. (9):
+where W (l)
+r  is the linear transformation for relation r , w r is the 
+gating vector, Nr (i) is the neighbors of node i , /u1D70E is the sig-
+moid function, and b (l) is the bias. This mechanism dynami-
+cally modulates feature aggregation based on relation type, 
+enhancing the semantic expressiveness of node embeddings. 
+Stacking multiple layers enables modeling of higher-order 
+structural information.
+Each edge type contributes distinct signals to the propa-
+gation process: coreference edges propagate entity identity 
+and maintain referential consistency; relation edges encode 
+soft relational dependencies between entity pairs; syntactic 
+edges capture sentence-level structural context and support 
+local cross-sentence propagation; enhanced relation edges 
+provide high-confidence semantic connections, focusing 
+message passing on reliable neighbors and reducing the 
+influence of noisy predictions; and alignment edges inte -
+grate dual-threshold filtered cross-task signals, connect-
+ing mentions that are both coreferentially plausible and 
+semantically similar in relation space. The gating vectors 
+control the relative influence of each edge type, enabling 
+the model to selectively emphasize critical relations and 
+structural cues during aggregation, thereby improving the 
+interpretability of information propagation within the end-
+to-end learning framework.
+4.5  Classifier
+After N propagation steps, the optimized mention embeddings 
+xN
+i  , xN
+j  and context embedding c ij are used to predict the coref-
+erence score Sgcr and relation score Sgre , as defined in 
+Eqs. (10)–(13):
+where W h , W ch , W t and W ct ∈ ℝd×d are trainable parameters. 
+The n-dimensional biaffine function is defined as Eq. (14):
+(9)
+x(l+1)
+i = tanh(
+R/uni2211.s1
+r=1
+/u1D70E(w T
+r ⋅ 1
+/uni007C.varNr(i)/uni007C.var
+/uni2211.s1
+k∈Nr(i)
+W (l)
+r x(l)
+k ) ⋅
+/uni2211.s1
+k∈Nr(i)
+W (l)
+r x(l)
+k + b(l))
+(10)vi = tanh(W hxN
+i + W chcij)
+(11)vj = tanh(W txN
+j + W ctcij)
+(12)Sgcr = CorefBiaﬀ (vi, vj)
+(13)Sgre = ReBiaﬀ (vi, vj)
+where W 1 ∈ ℝn×d×d , W 2 ∈ ℝn×2d , and b ∈ ℝn are trainable 
+parameters. For coreference resolution, the output dimension 
+is n = 1; for relation extraction, n =|R|+ 1. Following Zhou 
+et al. (Zhou et al. 2021), a virtual class TH is introduced to 
+learn a dynamic threshold for multi-label classification. At 
+inference, relation types with scores above TH are selected 
+as predictions; if none exceed the threshold, our model out-
+puts the empty set {⟂}.
+4.6  Training objective
+This work adopts a multi-task joint training strategy with 
+uncertainty weighting to balance the contributions of each 
+sub-task. The training objectives and label construction are 
+as follows.
+Table Encoder: For a mention pair (m i,m j) , table encoder 
+predicts coarse-grained coreference and relation links, out-
+putting scalar scores Scr , Sre . Logits are first processed with 
+softmax and structured into table form. Supervision labels 
+are ycr ∈{ 0,1} and yrebinary ∶= 1(yre ≠ {⟂}) . Scores are 
+converted to probabilities via sigmoid and optimized with 
+binary cross-entropy losses Ltcr and Ltre.
+Coreference Resolution: The fine-grained coreference 
+objective and labels follow the table encoder, with the dif-
+ference that inputs are refined mention embeddings after 
+graph reasoning. The loss is denoted Lcr.
+Relation Extraction: For (m i,m j) , the relation set R is 
+partitioned into a positive set P (with true relations) and a 
+negative set N = R�P . Our model is trained using an adap-
+tive threshold loss, defined in Eq. (15):
+The fine-grained relation extraction loss Lre is summed 
+over all mention pairs.
+Joint Training Objective: To balance the contributions of 
+all sub-tasks, we adopt Kendall et al.’s uncertainty weighting 
+(Kendall et al. 2018) to combine losses. The joint training 
+objective is defined in Eq. (16):
+where each /u1D70Et is a learnable uncertainty parameter corre-
+sponding to a sub-task.
+In addition, joint extraction tasks also suffer from a severe 
+sample imbalance problem. Given n detected mentions, 
+O(n2) mention pairs must be clustered, but most are non-
+coreferent; relation classification faces the same imbalance, 
+where negative pairs dominate. This makes it difficult for 
+(14)Biaﬀ(x,y) ∶= xW T
+1 y + W 2 (x ⊕ y)+ b
+(15)
+Lre =−
+�
+r∈P
+log( exp(sr)∑
+r�∈P∪{TH} exp(sr�))−log( exp(sTH )∑
+r�∈N∪{TH} exp(sr�))
+(16)Ljoint =
+/uni2211.s1
+t∈{tcr,tre,cr,re}
+Lt
+/u1D70E2
+t
++ log/u1D70Et
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 8 of 18
+our model to distinguish hard negatives from true positives. 
+To mitigate this, we introduce contrastive learning and hard 
+negative sampling to enhance the discriminability of entity-
+pair representations.
+For each candidate entity pair, we construct an embedding 
+eemb from contextual and enriched mention-level features. 
+Positive samples include pairs with real relations and their 
+mention-level variants, while hard negatives are selected 
+within the batch based on high cosine similarity but labeled 
+as NA. The number of negatives is fixed to three times that 
+of positives. The contrastive loss is defined in Eq. (17):
+where epos and eneg denote positive and negative samples, 
+sim is cosine similarity, and /u1D70F is the temperature parameter.
+The final loss combines the classification and contrastive 
+losses, as shown in Eq. (18):
+where /u1D706 is the weight of the contrastive loss.
+4.7  Decoder
+During decoding, we follow the strategy of Zhang et al. 
+(Zhang et al. 2023) to mitigate error propagation inherent 
+in pipeline decoding.
+Algorithm 1  HAC Decoding Algorithm
+Entity Cluster Decoding. Entity clusters are constructed 
+using hierarchical agglomerative clustering (HAC), as 
+shown in Algorithm 1. HAC defines the distance L between 
+two clusters Cx and Cy as the sum of coreference distance 
+Lc and relation distance Lr . The coreference distance adopts 
+average linkage, as in Eq. (19):
+(17)
+Lcontrast =− log
+exp(
+sim(epos ,eemb )
+/u1D70F)
+exp(
+sim(epos ,eemb )
+/u1D70F)+ ∑
+eneg
+exp(
+sim(eneg ,eemb )
+/u1D70F )
+(18)Ltotal = Ljoint + /u1D706⋅ Lcontrast
+Mentions in the same entity cluster are expected to share 
+similar relational patterns, enabling relation signals to 
+serve as an implicit bridge between coreference resolution 
+and relation extraction. Let the relation label y (i,j)
+r  be a R
+-dimensional binary vector. The relation vector is defined as 
+ri =[ y(i,1)
+r , ...,y(i,M )
+r ,y(1,i)
+r , ...,y(M ,j)
+r ]
+T
+∈ ℝ2M ×/uni007C.varR/uni007C.var . The relation 
+distance computes the average Hamming distance between 
+relation vectors, as in Eq. (20):
+Relation Triple Decoding. Given two entity clusters e1 
+and e2 , relation labels are derived by majority voting. For 
+relation type x , the final prediction is given by Eq. (21):
+5  Experimental results and analysis
+5.1  Datasets
+Our model is evaluated on widely used document-level rela-
+tion extraction datasets: DocRED(Yao et al. 2019) and Re-
+DocRED(Tan et al. 2022).
+DocRED contains over 10,000 Wikipedia documents and 
+97 relation types (including NA). The task requires extract-
+ing cross-sentence relations with complex semantic reason-
+ing and long-distance dependencies. The dataset provides 
+annotations for multiple entity categories (e.g., persons, 
+locations, organizations) and diverse relation types.
+Re-DocRED is a re-annotated extension of DocRED that 
+enriches relation facts and adds coreference information. 
+Since the original DocRED test set is not publicly available, 
+the authors split 1,000 evaluation documents into develop-
+ment and test sets. Statistics for DocRED and Re-DocRED 
+are shown in Table 2.
+(19)Lc = 1
+/uni007C.varC x/uni007C.var⋅ /uni007C.varC y/uni007C.var
+/uni2211.s1
+m i∈C x
+/uni2211.s1
+m j∈C y
+(1 − /u1D70E(Scr(i,j)))
+(20)Lr = 1
+/uni007C.varC x/uni007C.var⋅ /uni007C.varC y/uni007C.var
+/uni2211.s1
+m i∈C x
+/uni2211.s1
+m j∈C y
+/u1D70E(Hamming(r i,rj))
+(21)y(e1 ,e2 )
+x = 1((
+/uni2211.s1
+m i∈e1
+/uni2211.s1
+m j∈e2
+y(i,j)
+x ) > /uni007C.vare1 /uni007C.var⋅ /uni007C.vare2 /uni007C.var
+2 )
+Table 2  Statistics of DocRED and Re-DocRED
+Dataset DocRED Re-DocRED
+train dev train dev
+num_doc 3,053 1,000 3,053 500
+avg_mention 21.2 21.3 21.2 21.3
+avg_entity 19.5 19.6 19.4 19.4
+num_pos 35615 11470 67808 13362
+num_nega 1163035 384102 1125284 179870
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 9 of 18 275
+5.2  Experimental settings
+We implement our experiments using Python 3.10, and other 
+hyperparameters are summarized in Table 3.
+5.3  Baseline joint extraction models
+We compare MTEI against several baseline joint extraction 
+models. Earlier methods typically employed LSTMs for con-
+textual encoding, whereas recent approaches rely on fine-
+tuned PLMs to capture richer semantics. We train our model 
+on DocRED and Re-DocRED and benchmark it against the 
+following models:
+KB-IE (2021) (Verlinden et al. 2021): Integrates back -
+ground knowledge from Wikipedia and Wikidata into a 
+joint information extraction framework.
+Xu and Choi (2022) (Xu and Choi 2022): Implements a 
+standard pipeline system with a shared encoder and joint 
+loss, and further proposes JointM + GPGC, which enables 
+unidirectional information flow from RE to COREF.
+JEREX (2021) (Eberts and Ulges 2021): Enhances rela-
+tion extraction through multi-instance learning.
+seq2rel (2022) (Giorgi et al. 2022): A sequence-to-
+sequence model equipped with a copy mechanism.
+TableFiller (2023) (Zhang et al. 2023): Uses a simple 
+heuristic decoding strategy with a mention extractor, a 
+biaffine encoder, and a classifier.
+TAG (2023) (Zhang et al. 2023): A table-filling frame-
+work that improves information sharing via a table-to-
+graph generation mechanism.
+3G-DocRTE (2025)  (Saini and Nayak 2025 ): Unifies 
+document-level sub-tasks through a linearization strat-
+egy, sequentially generating mentions, normalizing them 
+into entity clusters, and extracting relation triples via lin-
+earized decoding.
+5.4  Experimental results
+In document-level joint extraction, we follow the standard 
+evaluation protocol widely adopted in prior work. The over-
+all evaluation covers three subtasks, each associated with 
+specific metrics. To avoid confusion caused by multiple 
+F1-based scores, we explicitly clarify all evaluation metrics 
+and notations used throughout this section, as summarized 
+in Table 4.
+Specifically, mention extraction (ME) is evaluated using 
+mention-level F1. Coreference resolution (COREF) perfor -
+mance is measured by the averaged F1 score of three corefer-
+ence metrics: MUC, B3 , and CEAFφ4. Relation extraction 
+(RE) is evaluated using entity-level F1, as well as Ign F1, 
+which excludes relational facts overlapping with the train-
+ing set.
+To assess the effectiveness of our model, we conduct 
+comparative experiments on DocRED and Re-DocRED 
+against strong baseline systems. The results are presented 
+in Tables 5 and 6, where the best performance is highlighted 
+in bold. It should be noted that the mention extraction com-
+ponent of our model is based on reproduced results from the 
+baseline; therefore, it is not directly compared with other 
+baseline methods for the mention extraction task, and the 
+corresponding results are not highlighted in bold.
+Through comprehensive comparisons with both gen-
+erative and discriminative models for document-level joint 
+extraction, Table  5 shows that, on DocRED with BERT-
+base, our model attains an improvement of 0.85 COREF F1 
+and 2.19 RE F1 over the generative SOTA 3G-DocRTE-pt 
+on the test set. Compared with the discriminative SOTA 
+Table 3  Hyperparameters value
+Dataset DocRED DocRED Re-DocRED
+PLM Bert Roberta Roberta
+learning_rate 3e-5 3e-5 3e-5
+hidden_size 768 1024 1024
+num_rel_labels 97 97 97
+/u1D703 0.1 0.1 0.1
+ρ 0.8 0.8 0.8
+ρcr 0.9 0.9 0.9
+ρre 0.5 0.5 0.5
+/u1D706 0.2 0.2 0.2
+train_batch_size 4 4 4
+test_batch_size 8 4 8
+Table 4  Definitions of 
+evaluation metrics and notations Notation Task Definition
+ME F1 Mention Extraction Mention-level F1 score
+COREF F1 Coreference Resolution Average of MUC, B3 , and CEAFφ4
+RE F1 Relation Extraction Entity-level F1 score
+RE Ign F1 Relation Extraction Entity-level F1 score excluding 
+relational facts overlapping with the 
+training set
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 10 of 18
+TAG, our model achieves gains of 0.81 COREF F1, 1.84 
+RE F1, and 1.73 RE Ign F1 on the dev set, as well as 1.05 
+COREF F1, 2.01 RE F1, and 1.93 RE Ign F1 on the test 
+set. These results indicate that, under a unified table-filling 
+framework, explicitly modeling structural dependencies 
+and interactions across subtasks—together with the align-
+ment graph, enhanced RE graph, and relation-guided gated 
+propagation—substantially strengthens the joint reasoning 
+of coreference resolution and relation extraction, yielding 
+consistent improvements on both tasks.
+Notably, the observed gains also suggest that our multi-
+graph explicit interaction design effectively alleviates error 
+propagation from mention extraction and coreference reso-
+lution to relation extraction. In document-level joint extrac-
+tion, errors in mention boundaries or incorrect coreference 
+links can directly distort the relational context of entity pairs, 
+leading to cascading performance degradation in relation 
+prediction. By explicitly enforcing cross-task structural con-
+straints via the alignment graph, our framework mitigates 
+the adverse impact of such upstream errors and stabilizes 
+relational reasoning.
+With RoBERTa-base, our model surpasses TAG by 0.49 
+COREF F1, 1.40 RE F1, and 0.93 RE Ign F1 on the dev set, 
+as well as by 0.87 COREF F1, 1.95 RE F1, and 1.59 RE 
+Ign F1 on the test set. Using RoBERTa-large, further gains 
+of 0.48 COREF F1, 1.70 RE F1, and 1.47 RE Ign F1 are 
+obtained on the dev set, as well as 0.43 COREF F1, 1.93 RE 
+F1, and 1.55 RE Ign F1 on the test set. These results demon-
+strate that stronger pretrained language models consistently 
+amplify performance on both COREF and RE, confirming 
+the robustness and scalability of our multi-graph joint mod-
+eling and uncertainty-aware weighting strategy.
+As shown in Table  6, on Re-DocRED with RoBERTa-
+base, our model achieves improvements of 0.51 COREF 
+F1, 2.16 RE F1, and 2.04 RE Ign F1 on the dev set, as 
+well as 0.48 COREF F1, 1.70 RE F1, and 1.55 RE Ign 
+F1 on the test set, compared with TAG. The consistent 
+and substantial gains on Re-DocRED further validate 
+Table 5  Experimental results 
+of DocRED. The results 
+marked with * were obtained 
+by reproducing the code 
+provided in the authors' GitHub 
+repository. Most methods report 
+only test results; we report both 
+dev/test (shown as dev/test)
+model PLM ME F1 COREF F1 RE
+F1 Ign F1
+KB-IE LSTM - 83.60 25.70 -
+JEREX BERT-base 92.99 82.79 40.38 -
+REBEL BERT-base 58.20 48.80 23.00 -
+REBEL-pt BERT-base 58.40 48.20 25.00 -
+seq2rel BERT-base - - 38.20 -
+Pipeline BERT-base 92.56 84.09 38.29 35.88
+Joint BERT-base 93.34 84.79 38.94 36.64
+JointM + GPGC BERT-base 93.35 84.96 40.62 38.28
+TABLEFILLER BERT-base 93.06*/93.39* 84.34/84.77 39.10/40.92 37.30/39.09
+TAG BERT-base 93.06*/93.39* 84.20*/84.20* 39.73*/40.68* 37.87*/38.68*
+3G-DocRTE BERT-base 93.00 80.80 38.10 -
+3G-DocRTE-pt BERT-base 93.00 80.40 40.50 -
+MTEI BERT-base 93.06/93.39 85.01/85.25 41.57/42.69 39.60/40.61
+TABLEFILLER Roberta-base 93.13*/93.46* 85.49/85.87 40.92/42.00 38.97/40.09
+TAG Roberta-base 93.13*/93.46* 85.44*/85.38* 41.22*/41.54* 39.64*/39.89*
+MTEI Roberta-base 93.13/93.46 85.93/86.25 42.62/43.49 40.57/41.48
+TAG Roberta-large 92.92*/93.32* 85.63*/85.83* 42.92*/43.09* 41.15*/41.45*
+MTEI Roberta-large 92.92/93.32 86.11/86.26 44.62/45.02 42.62/43.00
+Table 6  Experimental results of Re-DocRED. The results marked with * were obtained by reproducing the code provided in the authors' GitHub 
+repository. Most methods report only test results; we report both dev/test (shown as dev/test)
+model PLM ME F1 COREF F1 RE
+F1 Ign F1
+TABLEFILLER Roberta-base 93.39*/93.54* 86.27/85.25 48.35/48.94 47.30/48.02
+TAG Roberta-base 93.39*/93.54* 86.17*/85.88* 47.63*/48.20* 46.72*/47.41*
+MTEI Roberta-base 93.39/93.54 86.68/86.36 49.79/49.90 48.76/48.96
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 11 of 18 275
+the effectiveness of our approach. Since Re-DocRED 
+removes train–test overlap and corrects erroneous relation 
+triples, yielding higher-quality annotations and a more 
+reliable relation distribution, our model can more fully 
+exploit joint learning and explicit dependency modeling, 
+allowing relation extraction to benefit more directly from 
+coreference information and resulting in more convincing 
+performance improvements.
+5.5  Ablation experimental results and analysis
+To assess the impact of each component, we perform abla-
+tion studies on DocRED and Re-DocRED using different 
+PLMs, as shown in Tables 7, 8 and 9.
+Tables 7, 8 and 9  report systematic ablation studies on 
+DocRED and Re-DocRED under different PLM settings, 
+examining key components of our model, including the 
+alignment graph (align), enhanced RE graph (enhanced), 
+syntactic graph(syn), relation-guided graph network 
+(R-GCN), uncertainty-aware weighting (un-wei), and 
+hard negative sampling (hard neg). We further conduct 
+combined ablations by simultaneously removing both the 
+enhanced and alignment modules (w/o enhanced + align), 
+as well as removing all auxiliary components (w/o all), in 
+order to assess the degree of mutual dependency and com-
+plementarity among different modules. Overall, removing 
+any individual component leads to consistent performance 
+degradation in COREF F1, RE F1, and RE Ign F1 across 
+all datasets and PLM backbones, demonstrating that each 
+module contributes positively and complementarily to the 
+joint extraction framework.
+Among all ablations, removing the alignment graph 
+causes the most severe performance drop, indicating its 
+critical role in explicitly modeling semantic interactions 
+between coreference resolution and relation extraction. By 
+constructing alignment structures over mention-level repre-
+sentations, this module jointly optimizes entity consistency 
+and relational reasoning. Its removal disrupts cross-task 
+information flow, allowing coreference errors to propagate 
+into relation prediction, thereby substantially degrading joint 
+performance. These results confirm the necessity and effec-
+tiveness of explicit cross-task dependency modeling.
+Notably, the observed performance degradation is closely 
+linked to the mitigation of error propagation across tasks. 
+In document-level joint extraction, errors introduced at the 
+mention extraction or coreference resolution stage can eas-
+ily propagate into relation extraction, as inaccurate mention 
+boundaries or incorrect coreference links distort the rela-
+tional context of entity pairs. This cascading effect is clearly 
+seen in the ablation result from the w/o align setting, where 
+the absence of the alignment graph leads to substantial drops 
+in both COREF and RE F1 scores across all datasets and 
+PLM backbones (Tables  7, 8 and 9 ). Without the explicit 
+structural constraints provided by the alignment graph, erro-
+neous coreference signals can propagate unchecked into rela-
+tion reasoning, thereby degrading performance.
+In contrast, the alignment graph explicitly couples men-
+tion-level coreference representations with relation-level 
+semantic distributions, allowing the model to selectively 
+propagate reliable cross-task information while suppress-
+ing noisy or inconsistent signals. This structured interaction 
+prevents error cascades at the interface between COREF and 
+RE, stabilizing downstream relation prediction. By enforc-
+ing cross-task structural dependencies, the alignment graph 
+ensures that errors in one subtask do not disproportionately 
+affect the other, providing a robust mechanism for mitigating 
+error propagation.
+The error-mitigation role of the alignment graph is fur -
+ther evidenced by the w/o enhanced + align setting, where 
+jointly removing both modules results in significantly larger 
+performance drops compared to removing either component 
+individually. This observation underscores the critical role 
+of the alignment graph in preventing compounded errors 
+during joint inference. Without alignment supervision, even 
+the enhanced relational evidence alone is insufficient to com-
+pensate for upstream coreference noise, further validating 
+the importance of explicit cross-task alignment.
+Removing any auxiliary component consistently leads to 
+stable degradation in joint extraction performance, indicat-
+ing that these modules play complementary roles within the 
+overall framework. Specifically, eliminating the syntactic 
+graph results in noticeable yet relatively moderate perfor -
+mance drops across all experimental settings, suggesting 
+that syntactic structures provide beneficial local dependency 
+constraints for mention representation modeling and cross-
+sentence reasoning, thereby stabilizing the joint modeling 
+process. Removing the relation-guided graph network also 
+causes performance degradation, confirming the importance 
+of edge-type–aware information propagation for capturing 
+fine-grained dependencies across heterogeneous struc-
+tural views. The enhanced RE graph plays a critical role in 
+improving the robustness of relation extraction by supple-
+menting long-distance relational evidence and alleviating 
+relational sparsity, and its removal consistently weakens both 
+RE F1 and Ign F1. Meanwhile, uncertainty-aware weight-
+ing contributes to dynamically balancing task difficulty 
+during multi-task optimization, and hard negative sampling 
+enhances discrimination among semantically similar nega-
+tive relations. Notably, simultaneously removing both the 
+enhanced RE graph and the alignment module results in sub-
+stantially larger performance deterioration than removing 
+either component alone, revealing strong complementarity 
+between explicit cross-task alignment modeling and rela-
+tional enhancement mechanisms, and further verifying the 
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 12 of 18
+overall effectiveness and coherence of the proposed joint 
+extraction framework.
+To provide a clearer understanding of how our model per-
+forms effective joint reasoning, we analyze its mechanism 
+from a structural interpretability perspective.
+First, the proposed alignment graph offers an explicit and 
+learnable interaction pathway between coreference resolu-
+tion and relation extraction. Unlike implicit feature shar -
+ing in prior joint models, the alignment graph establishes 
+directed, task-aware edges that define how information 
+Table 7  Ablation study results 
+using BERT-base on DocRED model COREF RE
+dev test
+dev test F1 Ign F1 F1 Ign F1
+ours 85.01 85.25 41.57 39.60 42.69 40.61
+w/o hard neg 84.73 84.97 41.27 39.28 42.07 40.02
+w/o R-GCN 84.74 84.95 40.95 38.93 41.98 39.89
+w/o un-wei 84.47 84.60 40.71 38.59 41.51 39.40
+w/o enhanced 84.76 84.90 40.81 38.70 41.72 39.62
+w/o align 84.47 84.53 40.62 38.55 41.42 39.37
+w/o syn 84.81 84.84 40.79 38.73 41.94 39.86
+w/o enhanced + align 84.35 84.47 40.38 38.34 41.09 38.98
+w/o all 84.20 84.20 39.73 37.87 40.68 38.68
+Table 8  Ablation study results 
+using Roberta-base on DocRED model COREF RE
+dev test
+dev test F1 Ign F1 F1 Ign F1
+ours 85.93 86.25 42.62 40.57 43.49 41.48
+w/o hard neg 85.51 85.53 42.47 40.51 43.04 40.99
+w/o R-GCN 85.77 85.82 42.59 40.52 42.87 40.86
+w/o un-wei 85.61 85.63 42.02 40.06 42.26 40.18
+w/o enhanced 85.55 85.58 42.16 40.14 42.85 40.80
+w/o align 85.46 85.53 41.78 39.88 41.71 39.96
+w/o syn 85.67 85.75 42.38 40.19 42.91 40.83
+w/o enhanced + align 85.46 85.52 41.53 39.78 41.65 39.93
+w/o all 85.44 85.38 41.22 39.64 41.54 39.89
+Table 9  Ablation study 
+results using Roberta-base on 
+Re-DocRED
+model COREF RE
+dev test
+dev test F1 Ign F1 F1 Ign F1
+ours 86.68 86.36 49.79 48.76 49.90 48.96
+w/o hard neg 86.28 85.92 48.94 47.89 49.33 48.42
+w/o R-GCN 86.36 85.92 49.15 48.06 49.37 48.40
+w/o un-wei 86.31 86.10 49.20 48.16 49.26 48.35
+w/o enhanced 86.25 86.09 49.02 47.94 49.44 48.45
+w/o align 86.19 85.90 48.13 47.11 49.22 48.30
+w/o syn 86.41 86.15 49.23 48.32 49.36 48.51
+w/o enhanced + align 86.11 85.90 48.08 47.02 49.07 48.08
+w/o all 86.17 85.88 47.63 46.72 48.20 47.41
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 13 of 18 275
+from COREF is propagated to RE and vice versa. This 
+design makes the cross-task information flow structurally 
+constrained and interpretable, as each propagation path is 
+explicitly parameterized and optimized during training.
+Second, the use of multiple complementary graphs intro-
+duces redundant yet structured information channels. When 
+upstream mention or coreference predictions contain noise, 
+the model can still rely on alternative relational and syntactic 
+propagation paths to maintain stable relational reasoning. 
+This multi-graph interaction mechanism therefore provides 
+an interpretable explanation for the observed robustness and 
+reduced error propagation.
+Finally, the relation-guided gated graph attention net-
+work further enhances interpretability by adaptively con -
+trolling the influence of heterogeneous edge types at each 
+propagation layer. The learned gating mechanism dynami-
+cally adjusts the contribution of each subgraph according to 
+contextual semantics, enabling the model to suppress noisy 
+connections while emphasizing more informative relational 
+structures.
+Overall, these explicitly parameterized and structurally 
+constrained interaction mechanisms provide a principled and 
+interpretable explanation for the effectiveness of our multi-
+graph joint modeling framework.
+5.6  Similarity analysis experiment
+To further validate that the alignment graph proposed in 
+Section 4.3 indeed connects semantically similar mention 
+pairs, we conduct a node representation similarity analy -
+sis. Specifically, the mean of each node’s relation vectors is 
+used as its representation, and cosine similarity is computed 
+between all node pairs. On the dev set, similarity distribu-
+tions for align = 1 and align = 0 mention pairs are visual-
+ized using kernel density estimation curves and box plots, 
+as shown in Figs. 4 and 5.
+As shown in Fig.  4, the results exhibit a clear and con-
+sistent pattern. The similarity distribution of align = 1 pairs 
+shows a sharp peak near 1.0, indicating that most aligned 
+mention pairs are highly consistent in the embedding space. 
+In contrast, align = 0 pairs display a flatter distribution shifted 
+toward lower similarity values with a heavier tail, reflecting 
+greater semantic diversity and noise. Figure 5 further quan-
+tifies this gap: align = 1 pairs achieve a higher median and 
+interquartile range with a smaller overall spread, demonstrat-
+ing both higher similarity and stronger internal consistency. 
+This trend remains stable across different sample sizes, sug-
+gesting that the observed separation is not incidental.
+Overall, the similarity analysis validates the alignment 
+graph design: it preferentially links semantically similar 
+mentions, yielding more reliable paths for coreference aggre-
+gation and relation propagation. Consistent with ablation 
+results, removing this graph causes the largest performance 
+drop, highlighting its key role in reducing error propagation, 
+and improving relation extraction.
+5.7  Enhanced graph threshold selection 
+experiment
+To assess the effect of the edge filtering threshold 
+in the enhanced RE graph, we vary the threshold /u1D70C
+∈{0.1,0.2,…,0.9} while keeping all other settings fixed. 
+Our model is trained and evaluated at each value, and F1/
+Ign F1 on the development sets are reported and plotted as 
+line charts in Fig. 6.
+The results indicate that the edge filtering threshold sub-
+stantially affects the structural quality of the enhanced rela-
+tion graph. At low thresholds, the graph becomes dense, 
+providing rich cross-mention interactions but introducing 
+many low-confidence edges, which limits performance gains 
+and causes instability. As the threshold increases to a mod-
+erate range, noisy edges are gradually removed, leading to 
+improved edge quality and a consistent performance increase 
+on both development and test sets. At higher thresholds, per-
+formance reaches optimal or near-optimal levels, suggesting 
+a favorable trade-off between connectivity and noise reduc-
+tion that better supports relation inference. However, when 
+the threshold further increases to 0.9, the graph becomes 
+overly sparse, excessively pruning weak yet informative 
+interactions and resulting in performance degradation.
+Overall, these results demonstrate that appropriate thresh-
+old selection is critical to the effectiveness of the enhanced 
+relation graph. Under our setting, ρ = 0.8 achieves a strong 
+balance between peak performance and generalization sta-
+bility, and is therefore adopted as the default value, provid-
+ing empirical support for the hyperparameter choice of the 
+enhanced RE graph.
+5.8  Sensitivity analysis of alignment graph 
+thresholds experiment
+To analyze the sensitivity of the alignment graph to the 
+coreference filtering threshold.
+ρcr while controlling the influence of relation-level filter-
+ing, we fix the relation threshold ρre to 0.5 in this experiment. 
+To avoid introducing additional confounding factors during 
+the threshold sensitivity analysis, the relation threshold is set 
+to a moderate value, which maintains a balanced trade-off  
+between information coverage and noise suppression within 
+the alignment graph. Specifically, setting the relation con-
+fidence threshold to 0.5 represents an intermediate filter -
+ing state between loose and strict relation pruning, thereby 
+providing a stable and controllable reference condition for 
+isolating the impact of varying ρcr on model performance.
+All experiments in this section are conducted on the dev 
+set of DocRED. We report F1, Ign F1 for RE, and F1 for 
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 14 of 18
+COREF, and use these metrics to determine the optimal 
+threshold configuration for our model.
+Under this controlled setting, the coreference threshold 
+is varied within ρcr∈{0.5,0.6,0.7,0.8,0.9}, and its influ-
+ence on both relation extraction and coreference resolution 
+performance is evaluated. The rationale for selecting this 
+threshold range is that the model-predicted coreference 
+confidence can be regarded as a posterior probability esti-
+mate indicating whether two entity mentions belong to the 
+same coreference chain. Lower thresholds correspond to 
+a loose filtering strategy that introduces a large number of 
+potentially unstable coreference edges, which may amplify 
+cross-task noise propagation; in contrast, higher thresh-
+olds correspond to an overly strict filtering strategy that 
+significantly compresses the connectivity density of the 
+alignment graph, thereby weakening inter-task information 
+Fig. 4  Kernel density estimation (KDE) curves
+Fig. 5  Similarity box plots
+Fig. 6  Performance curves over different thresholds
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 15 of 18 275
+flow. Consequently, the interval [0.5,0.9] covers the prin-
+cipal transition from loose to strict filtering regimes and 
+is sufficient to characterize the impact of filtering strength 
+on model performance.
+Experimental results are shown in Fig.  7, illustrating 
+the trends of RE F1 (orange), RE Ign F1 (green), and 
+COREF F1 (purple). As ρcr increases from 0.5 to 0.9, 
+all three metrics exhibit a consistent upward trend. The 
+model achieves its best overall performance at ρcr=0.9. 
+Decreasing ρcr introduces an increasing number of low-
+confidence coreference edges, which amplifies cross-
+task noise propagation and weakens the effectiveness of 
+explicit interaction modeling, ultimately degrading joint 
+extraction performance. These results indicate that a rela-
+tively strict coreference filtering strategy is beneficial for 
+preserving high-quality alignment signals and stabilizing 
+the joint inference process.
+Based on the conclusion from the previous experiment 
+that ρcr=0.9 yields the optimal performance, we fix ρcr=0.9 
+in this experiment and vary the relation threshold within 
+ρre ∈{0.1,0.2,…,0.9}, resulting in nine model variants. The 
+left subfigure of Fig. 8 presents the RE F1 (orange) and RE 
+Ign F1 (green) curves, while the right subfigure reports the 
+COREF F1 (purple) curve. We observe a clear “increase-then-
+decrease” trend in model performance as ρre increases. When 
+ρre exceeds 0.5, performance begins to decline and exhibits 
+noticeable degradation in the higher threshold range. The 
+best results are obtained at ρre=0.5. These results indicate that 
+overly small relation thresholds introduce a large number of 
+low-confidence relation edges, thereby increasing noise inter-
+ference, while overly large thresholds excessively compress the 
+inter-task interaction scope and restrict the information cover-
+age of the alignment graph. Both extremes are detrimental to 
+joint extraction performance.
+Fig. 7  Performance curves over different thresholds
+Fig. 8  Performance curves over different thresholds
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 16 of 18
+5.9  Weight visualization experiment
+To further assess the effectiveness of the uncertainty-
+based weighting mechanism in multi-task joint optimi-
+zation, we visualize the task weight dynamics during 
+training. The four subtasks—coreference table predic -
+tion, relation table prediction, coreference classification, 
+and relation classification—differ in learning difficulty 
+and convergence speed. Uniform weighting may there-
+fore induce gradient conflicts and degrade overall per -
+formance. To examine how uncertainty weighting facili-
+tates cross-task coordination, we track the evolution of 
+the learnable uncertainty parameters log σ for each task 
+and visualize the corresponding weight trajectories and 
+heatmaps, as shown in Fig.  9.
+From the dynamic weight visualizations, we observe 
+that uncertainty-based weighting provides effective 
+adaptive regulation during multi-task joint learning. 
+Specifically, the learnable parameters log σ for all four 
+subtasks exhibit a consistent downward trend, indicat-
+ing progressively reduced estimated prediction variance 
+and decreasing training uncertainty as learning proceeds. 
+Correspondingly, the task weights, which are inversely 
+related to log σ, increase overall, showing that the model 
+gradually allocates more emphasis to tasks with lower 
+uncertainty and more stable learning, thereby enabling 
+efficient distribution of optimization capacity.
+Notably, the relation extraction (RE) task displays a dis-
+tinct weighting pattern compared with the other subtasks. 
+In the early training stage, its log σ temporarily increases 
+rather than decreases, implying heightened uncertainty in 
+relation prediction. This behavior reflects the greater dif-
+ficulty and instability of document-level relation reasoning; 
+assigning it a large weight too early could amplify noisy 
+gradients and hinder joint optimization. The model therefore 
+adaptively suppresses its influence by increasing log σ. As 
+training progresses, RE increasingly benefits from corefer -
+ence signals and table-structured predictions, leading to a 
+marked reduction in uncertainty and a gradual rise in its 
+weight, which stabilizes in later stages. This trend indicates 
+that the model dynamically adjusts its reliance on relation 
+reasoning—down-weighting it initially to ensure stability 
+and strengthening it once reliable learning signals emerge.
+The weight heatmaps further illustrate both stability and 
+differentiation in weight evolution. Overall, task weights 
+converge from dispersed distributions, suggesting that 
+uncertainty weighting effectively mitigates gradient noise 
+across tasks. Meanwhile, RE exhibits larger spatial fluctua-
+tions than the others, consistent with its stronger dependence 
+on contextual and structural cues in document-level infer -
+ence and its greater need for dynamic adjustment.
+In summary, uncertainty-based weighting enables adap-
+tive optimization according to task difficulty and training 
+dynamics. It alleviates gradient conflicts and imbalance 
+across tasks while progressively increasing emphasis on 
+relation extraction in later stages, thereby enhancing cross-
+task information integration and improving overall perfor -
+mance and generalization in document-level joint entity and 
+relation extraction.
+6  Conclusions
+This paper proposes a table-filling based multi-task 
+explicit interaction framework for document-level joint 
+entity and relation extraction. The core contribution is 
+the introduction of an alignment graph that explicitly 
+models structured dependencies between COREF and 
+RE, enabling regulated bidirectional information flow 
+across subtasks and improving reasoning consistency in 
+long and structurally complex documents. An enhanced 
+RE graph is introduced to prioritize high-confidence rela-
+tion features, further improving entity representations. 
+To strengthen the graph network’s ability to differentiate 
+multi-type semantic edges, a relation-guided gated graph 
+attention mechanism is employed for adaptive informa-
+tion modulation. Additionally, integrating hard negative 
+sampling with uncertainty-based weighting effectively 
+mitigates noise in cross-task information propagation, 
+improving training stability and multi-task coordination. 
+Extensive experiments on standard DocRE benchmarks 
+demonstrate that the proposed model achieves state-of-
+the-art overall performance and key metrics, validating 
+its effectiveness in improving document-level relation 
+extraction accuracy and handling long-document scenar -
+ios. Future work will explore adaptive alignment strate -
+gies and richer structural priors to further enhance scal-
+ability and generalization in complex document contexts.
+7  Limitations
+Our framework introduces additional computational over -
+head due to multi-graph construction and propagation, 
+which may limit scalability for extremely long documents 
+with many mentions. Moreover, the model depends on suf-
+ficient supervision to learn stable cross-task interactions. In 
+low-resource settings, sparse or noisy coreference and rela-
+tion annotations may weaken the effectiveness of the align-
+ment and enhanced relation graphs. Improving scalability 
+and robustness under such conditions remains an important 
+direction for future work.
+Journal of King Saud University Computer and Information Sciences (2026) 38:275 
+ Page 17 of 18 275
+Fig. 9  Weight visualization
+ Journal of King Saud University Computer and Information Sciences (2026) 38:275
+275 Page 18 of 18
+Author contribution D., Z., and J. put forward the idea of this paper, 
+completed the experiment, and wrote the paper. H. and C. reviewed and 
+gave advice. The corresponding authors complete the review, comment 
+guidance, and funding.
+Funding This work is supported by Jilin Provincial Department of 
+Science and Technology Development Plan Project [grant numbers: 
+20220203127SF], National Natural Science Foundation of China [grant 
+numbers 62162062]. The school-enterprise cooperation project of Yan-
+bian University [2024-10]&[2019-34（续）].
+Data availability The datasets generated during and analysed during 
+the current study are available from the corresponding author on rea-
+sonable request.
+Declarations 
+Competing interests The authors declare no competing interests.
+Open Access  This article is licensed under a Creative Commons Attri-
+bution-NonCommercial-NoDerivatives 4.0 International License, which 
+permits any non-commercial use, sharing, distribution and reproduction 
+in any medium or format, as long as you give appropriate credit to the 
+original author(s) and the source, provide a link to the Creative Commons 
+licence, and indicate if you modified the licensed material. You do not have 
+permission under this licence to share adapted material derived from this 
+article or parts of it. The images or other third party material in this article 
+are included in the article’s Creative Commons licence, unless indicated 
+otherwise in a credit line to the material. If material is not included in the 
+article’s Creative Commons licence and your intended use is not permit-
+ted by statutory regulation or exceeds the permitted use, you will need to 
+obtain permission directly from the copyright holder. To view a copy of 
+this licence, visit http:// creat iveco mmons. org/ licen ses/ by- nc- nd/4. 0/.
+References
+Arora S, Liang Y, Ma T (2017) A simple but tough-to-beat baseline 
+for sentence embeddings[C]//International conference on learning 
+representations
+Cabot P L H, Navigli R (2021) REBEL: Relation extraction by end-
+to-end language generation[C]//Findings of the association for 
+computational linguistics: EMNLP 2021. 2370–2381
+Delaunay J, Tran HTH, González-Gallardo CE et al (2023) A compre-
+hensive survey of document-level relation extraction (2016–2023)
+[J]. arXiv preprint arXiv. 2309. 16396. Accessed 7 Mar 2026
+Dozat T, Manning CD (2016) Deep biaffine attention for neural depend-
+ency parsing[J]. arXiv preprint arXiv: 1611. 01734. Accessed 7 
+Mar 2026
+Eberts M, Ulges A (2021) An end-to-end model for entity-level relation 
+extraction using multi-instance learning[J]. arXiv preprint arXiv: 
+2102. 05980. Accessed 7 Mar 2026
+Ethayarajh K (2019) How contextual are contextualized word repre-
+sentations? Comparing the geometry of BERT, ELMo, and GPT-2 
+embeddings[J]. arXiv preprint arXiv: 1909. 00512. Accessed 7 Mar 
+2026
+Giorgi J, Bader G, Wang BA (2022) Sequence-to-sequence approach 
+for document-level relation extraction[C]//Proceedings of the 21st 
+Workshop on Biomedical Language Processing. pp 10–25
+Kendall A, Gal Y, Cipolla R (2018) Multi-task learning using uncer -
+tainty to weigh losses for scene geometry and semantics[C]//Pro-
+ceedings of the IEEE conference on computer vision and pattern 
+recognition. pp 7482–7491
+Nayak T, Ng HT (2020) Effective modeling of encoder-decoder archi-
+tecture for joint entity and relation extraction[C]//Proceedings of 
+the AAAI conference on artificial intelligence, 34(05):8528–8535
+Pereyra G, Tucker G, Chorowski J et al (2017) Regularizing neural 
+networks by penalizing confident output distributions[J]. arXiv 
+preprint arXiv: 1701. 06548. Accessed 7 Mar 2026
+Saini P, Nayak T (2025) Effective Modeling of Generative Framework 
+for Document-level Relational Triple Extraction[C]//Proceed-
+ings of the Workshop on Generative AI and Knowledge Graphs 
+(GenAIK). pp 1–12
+Soares L B, FitzGerald N, Ling J et al (2019) Matching the blanks: 
+Distributional similarity for relation learning[J]. arXiv preprint 
+arXiv: 1906. 03158. Accessed 7 Mar 2026
+Tan Q, Xu L, Bing L et al (2022) Revisiting DocRED-addressing the 
+false negative problem in relation extraction[C]//Proceedings of 
+the 2022 conference on empirical methods in natural language 
+processing. pp 8472–8487
+Verlinden S, Zaporojets K, Deleu J et al (2021) Injecting knowledge 
+base information into end-to-end joint entity and relation extrac-
+tion and coreference resolution[J]. arXiv preprint arXiv: 2107.  
+02286. Accessed 7 Mar 2026
+Xu L, Choi JD (2022) Modeling task interactions in document-level 
+joint entity and relation extraction[J]. arXiv preprint arXiv: 2205. 
+01909. Accessed 7 Mar 2026
+Yao Y, Ye D, Li P et al (2019) DocRED: A large-scale document-level 
+relation extraction dataset[J]. arXiv preprint arXiv: 1906. 06127. 
+Accessed 7 Mar 2026
+Zeng S, Xu R, Chang B et al (2020) Double graph based reasoning for 
+document-level relation extraction[J]. arXiv preprint arXiv: 2009. 
+13752. Accessed 7 Mar 2026
+Zhang R, Li Y, Zou L (2023) A novel table-to-graph genera-
+tion approach for document-level joint entity and relation 
+extraction[C]//Proceedings of the 61st Annual Meeting of the 
+Association for Computational Linguistics (Volume 1: Long 
+Papers). 10853–10865
+Zhou W, Huang K, Ma T et al (2021) Document-level relation extrac-
+tion with adaptive thresholding and localized context pooling[C]//
+Proceedings of the AAAI conference on artificial intelligence. 
+35(16)14612–14620
+Publisher's Note Springer Nature remains neutral with regard to 
+jurisdictional claims in published maps and institutional affiliations.

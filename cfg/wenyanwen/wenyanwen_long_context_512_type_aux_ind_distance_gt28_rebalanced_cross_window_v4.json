@@ -1,0 +1,22 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux_ind_distance_gt28_rebalanced_cross_window_v3",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_ind_distance_gt28_rebalanced_cross_window_v4",
+    "data_dir": "ind_distance_gt28_rebalanced_cross_window_v3",
+    "reinitialize_dataset": false,
+    "ner_type_label_smoothing": 0.05,
+    "ner_type_focal_gamma": 1.0,
+    "ner_type_focus_types": ["学校", "行政区划", "水系", "城市内部区划"],
+    "ner_type_focus_weight": 1.25,
+    "ner_type_decode_weight": 0.35,
+    "ner_boundary_decode_weight": 0.20,
+    "ner_boundary_start_candidate_fusion": true,
+    "ner_boundary_loss_weight": 0.20,
+    "ner_boundary_hard_negative_weight": 3.0,
+    "ner_boundary_adjacent_negative_weight": 4.0,
+    "ner_boundary_internal_negative_weight": 2.0,
+    "ner_boundary_positive_weight": 1.5,
+    "ner_boundary_hard_negative_radius": 2,
+    "ner_boundary_focal_gamma": 1.5
+  }
+}

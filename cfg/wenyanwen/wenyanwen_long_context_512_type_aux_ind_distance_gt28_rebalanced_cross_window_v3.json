@@ -1,0 +1,14 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux_ind_distance_gt28_rebalanced",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_ind_distance_gt28_rebalanced_cross_window_v3",
+    "data_dir": "ind_distance_gt28_rebalanced_cross_window_v3",
+    "reinitialize_dataset": false,
+    "ner_type_decode_weight": 0.35,
+    "ner_boundary_decode_weight": 0.35,
+    "ner_boundary_loss_weight": 0.20,
+    "ner_boundary_hard_negative_weight": 3.0,
+    "ner_boundary_positive_weight": 1.5,
+    "ner_boundary_hard_negative_radius": 1
+  }
+}

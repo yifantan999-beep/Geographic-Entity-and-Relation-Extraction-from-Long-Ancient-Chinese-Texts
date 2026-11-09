@@ -1,0 +1,8 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux_ind_distance_gt28_rebalanced_cross_window_v5",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_ind_distance_gt28_rebalanced_cross_window_diagnostic_easy",
+    "data_dir": "ind_distance_gt28_rebalanced_cross_window_diagnostic_easy",
+    "reinitialize_dataset": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "base": "wenyanwen/wenyanwen_long_context_512_type_aux_ind_distance_gt28_rebalanced_cross_window_v6",
+  "dataset": {
+    "name": "wenyanwen_long_context_type_aux_ind_distance_gt28_rebalanced_cross_window_diagnostic_easy_v7",
+    "data_dir": "ind_distance_gt28_rebalanced_cross_window_diagnostic_easy",
+    "reinitialize_dataset": false,
+    "ner_span_biaffine": true,
+    "ner_span_biaffine_rank": 64,
+    "ner_span_biaffine_weight": 0.35,
+    "ner_span_width_embedding": true,
+    "ner_span_learned_gate": true,
+    "ner_type_loss_weight": 0.20,
+    "ner_type_decode_weight": 0.10,
+    "ner_type_prototype_loss_weight": 0.15,
+    "ner_type_prototype_decode_weight": 0.10,
+    "ner_type_prototype_temperature": 0.15,
+    "ner_type_confusion_margin": 0.25,
+    "ner_type_focus_types": [
+      "学校",
+      "园林",
+      "行政区划",
+      "水系",
+      "城市内部区划",
+      "街道",
+      "官署",
+      "乡镇",
+      "水利设施"
+    ],
+    "ner_type_focus_weight": 1.35,
+    "ner_type_confusion_pairs": [
+      ["学校", "园林"],
+      ["行政区划", "水系"],
+      ["城市内部区划", "街道"],
+      ["官署", "园林"],
+      ["乡镇", "行政区划"],
+      ["水系", "水利设施"]
+    ]
+  }
+}

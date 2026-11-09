@@ -1,0 +1,22 @@
+{
+  "epochs": 15,
+  "patience": 4,
+  "documents_per_batch": 8,
+  "window_batch_size": 8,
+  "max_unlabeled_pairs": 512,
+  "learning_rate": 0.001,
+  "weight_decay": 0.01,
+  "dropout": 0.2,
+  "type_prior_weight": 0.5,
+  "evidence_loss_weight": 0.2,
+  "evidence_top_k": 2,
+  "fusion_mode": "learned",
+  "fusion_hidden_size": 32,
+  "fusion_relation_embedding_size": 8,
+  "fusion_global_loss_weight": 0.25,
+  "distance_positive_loss_weight": 0.0,
+  "type_balance_positive_loss_weight": 0.25,
+  "type_balance_max_weight": 4.0,
+  "max_grad_norm": 1.0,
+  "seed": 42
+}
