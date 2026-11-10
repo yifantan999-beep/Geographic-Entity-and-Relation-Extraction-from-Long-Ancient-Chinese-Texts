@@ -226,17 +226,7 @@ python -m pytest -q
 
 The tests cover configuration, window construction, Stage 1 inference behavior, document-level relation modules, and analysis utilities. GPU training and the full IND benchmark require the separately provisioned model weights and data.
 
-## Citation
 
-The base ITER implementation is described in the EMNLP 2024 paper:
-
-~~~bibtex
-@inproceedings{iter2024,
-  title     = {ITER: Iterative Transformer-based Entity Recognition and Relation Extraction},
-  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2024},
-  year      = {2024},
-  url       = {https://aclanthology.org/2024.findings-emnlp.655/}
-}
 ~~~
 
 Please also cite the original IND dataset and any baseline methods whose results are used in comparisons.
